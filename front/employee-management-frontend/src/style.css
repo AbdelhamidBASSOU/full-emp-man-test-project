@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+
+:root {
+  /* Chrome (navbar/sidebar) — dark developer-tool shell */
+  --color-chrome: #10131B;
+  --color-chrome-elevated: #171B26;
+  --color-chrome-border: #262B38;
+  --color-chrome-text: #B4B9C6;
+  --color-chrome-text-active: #FFFFFF;
+
+  /* Content canvas — light workspace */
+  --color-bg: #F5F6F8;
+  --color-surface: #FFFFFF;
+  --color-text: #131722;
+  --color-text-muted: #6B7280;
+  --color-border: #E4E7EC;
+
+  /* Accent */
+  --color-primary: #4C6FFF;
+  --color-primary-hover: #3D5AE0;
+  --color-primary-soft: #EBEFFF;
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --color-success: #22C55E;
+  --color-success-soft: #E7F9EE;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  --radius: 6px;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+  margin: 0;
+}
+
+button, input, select {
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Reusable component classes */
+.btn {
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+.btn-primary:disabled {
+  background: #A8B3D1;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+.btn-danger:hover {
+  background: var(--color-danger-hover);
+}
+.btn-secondary {
+  background: white;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.btn-secondary:hover {
+  background: var(--color-bg);
+  border-color: #C9CDD6;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(19, 23, 34, 0.04);
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  background: white;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
