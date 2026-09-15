@@ -14,11 +14,35 @@ const router = useRouter()
 async function handleLogin() {
   error.value = ''
   loading.value = true
+
   try {
-    await authStore.login(email.value, password.value)
-    router.push('/employees')
+    await authStore.login(
+      email.value.trim(),
+      password.value,
+    )
+
+    await router.push('/employees')
   } catch (err) {
-    error.value = 'Invalid email or password'
+    console.error('Login failed:', err)
+
+    const status = err.response?.status
+
+    if (status === 401) {
+      error.value =
+        'Invalid email or password.'
+    } else if (status === 403) {
+      error.value =
+        'Access denied. Please try again.'
+    } else if (status === 429) {
+      error.value =
+        'Too many login attempts. Please wait and try again later.'
+    } else if (err.response) {
+      error.value =
+        'The server rejected the login request.'
+    } else {
+      error.value =
+        'Unable to connect to the server.'
+    }
   } finally {
     loading.value = false
   }
@@ -29,30 +53,71 @@ async function handleLogin() {
   <div class="login-container">
     <div class="login-form card">
       <div class="terminal-dots">
-        <span></span><span></span><span></span>
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
 
       <div class="brand">
         <div class="brand-mark">EM</div>
+
         <h1>Employee Management</h1>
       </div>
-      <p class="subtitle mono">&gt; authenticate to continue</p>
+
+      <p class="subtitle mono">
+        &gt; authenticate to continue
+      </p>
 
       <form @submit.prevent="handleLogin">
         <div class="field">
           <label>Email or Username</label>
-          <input v-model="email" type="text" placeholder="you@company.com" class="input" required />
+
+          <input
+            v-model="email"
+            type="text"
+            placeholder="you@company.com"
+            class="input"
+            autocomplete="username"
+            required
+          />
         </div>
 
         <div class="field">
           <label>Password</label>
-          <input v-model="password" type="password" placeholder="••••••••" class="input" required />
+
+          <input
+            v-model="password"
+            type="password"
+            placeholder="••••••••"
+            class="input"
+            autocomplete="current-password"
+            required
+          />
         </div>
 
-        <p v-if="error" class="general-error">{{ error }}</p>
+        <div class="forgot-password">
+          <router-link to="/forgot-password">
+            Forgot password?
+          </router-link>
+        </div>
 
-        <button type="submit" class="btn btn-primary btn-full" :disabled="loading">
-          {{ loading ? 'Signing in...' : 'Sign In' }}
+        <p
+          v-if="error"
+          class="general-error"
+        >
+          {{ error }}
+        </p>
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-full"
+          :disabled="loading"
+        >
+          {{
+            loading
+              ? 'Signing in...'
+              : 'Sign In'
+          }}
         </button>
       </form>
     </div>
@@ -67,34 +132,55 @@ async function handleLogin() {
   min-height: 100vh;
   background: var(--color-chrome);
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
+    radial-gradient(
+      circle at 1px 1px,
+      rgba(255, 255, 255, 0.06) 1px,
+      transparent 0
+    );
   background-size: 24px 24px;
 }
+
 .login-form {
   padding: var(--space-xl);
   width: 380px;
   position: relative;
 }
+
 .terminal-dots {
   display: flex;
   gap: 6px;
   margin-bottom: var(--space-lg);
 }
+
 .terminal-dots span {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--color-border);
 }
-.terminal-dots span:nth-child(1) { background: #EF4444; opacity: 0.6; }
-.terminal-dots span:nth-child(2) { background: #F59E0B; opacity: 0.6; }
-.terminal-dots span:nth-child(3) { background: #22C55E; opacity: 0.6; }
+
+.terminal-dots span:nth-child(1) {
+  background: #EF4444;
+  opacity: 0.6;
+}
+
+.terminal-dots span:nth-child(2) {
+  background: #F59E0B;
+  opacity: 0.6;
+}
+
+.terminal-dots span:nth-child(3) {
+  background: #22C55E;
+  opacity: 0.6;
+}
+
 .brand {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   margin-bottom: 4px;
 }
+
 .brand-mark {
   width: 32px;
   height: 32px;
@@ -109,30 +195,58 @@ async function handleLogin() {
   font-family: var(--font-mono);
   flex-shrink: 0;
 }
+
 .login-form h1 {
   font-size: 18px;
 }
+
 .subtitle {
   color: var(--color-text-muted);
   font-size: 13px;
-  margin: var(--space-xs) 0 var(--space-xl) 0;
+  margin:
+    var(--space-xs)
+    0
+    var(--space-xl)
+    0;
 }
+
 .field {
   margin-bottom: var(--space-md);
 }
+
 .field label {
   display: block;
   font-size: 13px;
   color: var(--color-text-muted);
   margin-bottom: 4px;
 }
+
+.forgot-password {
+  text-align: right;
+  margin-top: -6px;
+  margin-bottom: var(--space-md);
+}
+
+.forgot-password a {
+  color: var(--color-primary);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
+}
+
 .general-error {
   color: var(--color-danger);
   font-size: 13px;
   margin-bottom: var(--space-md);
 }
+
 .btn-full {
   width: 100%;
+  justify-content: center;
+  text-align: center;
   margin-top: var(--space-sm);
 }
 </style>

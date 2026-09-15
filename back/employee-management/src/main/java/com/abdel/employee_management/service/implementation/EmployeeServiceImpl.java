@@ -3,10 +3,12 @@ package com.abdel.employee_management.service.implementation;
 import com.abdel.employee_management.dto.EmployeeDTO;
 import com.abdel.employee_management.dto.EmployeeRequest;
 import com.abdel.employee_management.model.Employee;
+import com.abdel.employee_management.model.User;
 import com.abdel.employee_management.repository.EmployeeRepository;
 import com.abdel.employee_management.security.PermissionChecker;
 import com.abdel.employee_management.service.EmployeeService;
 import com.abdel.employee_management.service.FileStorageService;
+import com.abdel.employee_management.service.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Autowired
     private PermissionChecker permissionChecker;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     public EmployeeDTO createEmployee(EmployeeRequest request) {
         permissionChecker.checkCreate();
@@ -35,6 +40,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         mapRequestToEntity(request, employee);
 
         Employee saved = employeeRepository.save(employee);
+        notifyIfNormalUser("CREATE", "created employee " + saved.getFirstName() + " " + saved.getLastName());
         return toDTO(saved);
     }
 
@@ -46,14 +52,21 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         mapRequestToEntity(request, employee);
-
-        return toDTO(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        notifyIfNormalUser("UPDATE", "updated employee " + saved.getFirstName() + " " + saved.getLastName());
+        return toDTO(saved);
     }
 
     @Override
     public void deleteEmployee(Long id) {
         permissionChecker.checkDelete();
+
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        String name = employee.getFirstName() + " " + employee.getLastName();
+
         employeeRepository.deleteById(id);
+        notifyIfNormalUser("DELETE", "deleted employee " + name);
     }
 
     @Override
@@ -82,7 +95,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         String storedKey = fileStorageService.uploadFile(file, objectKey);
 
         employee.setPhotoUrl(storedKey);
-        return toDTO(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        notifyIfNormalUser("UPDATE", "uploaded a photo for " + saved.getFirstName() + " " + saved.getLastName());
+        return toDTO(saved);
     }
 
     @Override
@@ -101,7 +116,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         String storedKey = fileStorageService.uploadFile(file, objectKey);
 
         employee.setCvUrl(storedKey);
-        return toDTO(employeeRepository.save(employee));
+        Employee saved = employeeRepository.save(employee);
+        notifyIfNormalUser("UPDATE", "uploaded a CV for " + saved.getFirstName() + " " + saved.getLastName());
+        return toDTO(saved);
     }
 
     @Override
@@ -130,6 +147,14 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         return fileStorageService.getFile(employee.getPhotoUrl());
+    }
+
+    private void notifyIfNormalUser(String actionType, String actionDescription) {
+        User currentUser = permissionChecker.getCurrentUser();
+        if (currentUser.getUserType() == User.UserType.NORMAL_USER) {
+            String message = currentUser.getEmail() + " " + actionDescription;
+            notificationService.notify(currentUser.getEmail(), actionType, message);
+        }
     }
 
     private void mapRequestToEntity(EmployeeRequest request, Employee employee) {

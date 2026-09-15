@@ -13,12 +13,11 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // For a technical test, a hardcoded key is fine. In production this would come from an env variable.
     private final SecretKey key = Keys.hmacShaKeyFor(
             "this-is-a-very-long-secret-key-for-jwt-signing-minimum-256-bits".getBytes()
     );
 
-    private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10 hours
+    private final long EXPIRATION_TIME = 1000 * 60 * 20;
 
     public String generateToken(UserDetails userDetails) {
         return Jwts.builder()
