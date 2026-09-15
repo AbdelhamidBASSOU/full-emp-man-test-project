@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import AppLayout from '../components/AppLayout.vue'
 import EmployeeFormModal from '../components/EmployeeFormModal.vue'
 import { getEmployees, deleteEmployee } from '../api/employees'
@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/auth'
 
 const toast = useToastStore()
 const authStore = useAuthStore()
+const canCreateEmployee = computed(() => authStore.isSuperAdmin || authStore.canCreate)
 
 const employees = ref([])
 const search = ref('')
@@ -88,7 +89,10 @@ const debouncedSearch = debounce(() => {
 
 watch(search, debouncedSearch)
 watch(page, loadEmployees)
-onMounted(loadEmployees)
+onMounted(() => {
+  authStore.fetchCurrentUser()
+  loadEmployees()
+})
 </script>
 
 <template>
@@ -102,7 +106,7 @@ onMounted(loadEmployees)
           </span>
         </div>
         <button
-          v-if="authStore.isSuperAdmin || authStore.canCreate"
+          v-if="canCreateEmployee"
           class="btn btn-primary"
           @click="openCreateModal"
         >
@@ -189,6 +193,7 @@ onMounted(loadEmployees)
                 <td>
                   <div class="row-actions">
                     <button
+                      v-if="authStore.isSuperAdmin || authStore.canUpdate"
                       class="btn btn-secondary btn-sm action-btn"
                       @click="openEditModal(emp)"
                       title="Edit employee details"
@@ -200,6 +205,7 @@ onMounted(loadEmployees)
                       Edit
                     </button>
                     <button
+                      v-if="authStore.isSuperAdmin || authStore.canDelete"
                       class="btn btn-danger btn-sm action-btn"
                       @click="handleDelete(emp)"
                       title="Delete employee record"
@@ -210,6 +216,9 @@ onMounted(loadEmployees)
                       </svg>
                       Delete
                     </button>
+                    <span v-if="!authStore.isSuperAdmin && !authStore.canUpdate && !authStore.canDelete" class="text-sm text-muted">
+                      Read only
+                    </span>
                   </div>
                 </td>
               </tr>

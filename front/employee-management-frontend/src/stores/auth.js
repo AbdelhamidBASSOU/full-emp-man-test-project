@@ -71,6 +71,10 @@ export const useAuthStore = defineStore('auth', {
     token: null,
     email: null,
     userType: null,
+    canCreate: false,
+    canRead: false,
+    canUpdate: false,
+    canDelete: false,
     initialized: false,
   }),
 
@@ -80,12 +84,16 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setSession(token, email, userType) {
+    setSession(token, email, userType, permissions = {}) {
       clearAuthTimers()
 
       this.token = token
       this.email = email
       this.userType = userType
+      this.canCreate = Boolean(permissions.canCreate)
+      this.canRead = Boolean(permissions.canRead)
+      this.canUpdate = Boolean(permissions.canUpdate)
+      this.canDelete = Boolean(permissions.canDelete)
 
       scheduleExpiryWarning(token)
       scheduleAutomaticRefresh(token, () => this.refreshAccessToken())
@@ -95,6 +103,10 @@ export const useAuthStore = defineStore('auth', {
       this.token = null
       this.email = null
       this.userType = null
+      this.canCreate = false
+      this.canRead = false
+      this.canUpdate = false
+      this.canDelete = false
 
       clearAuthTimers()
     },
@@ -107,34 +119,57 @@ export const useAuthStore = defineStore('auth', {
         password,
       })
 
-      const { token, email: userEmail, userType } = response.data
+      const {
+        token,
+        email: userEmail,
+        userType,
+        canCreate,
+        canRead,
+        canUpdate,
+        canDelete,
+        permissions,
+      } = response.data
 
       if (!token) {
         throw new Error('The server did not return an access token.')
       }
 
-      this.setSession(token, userEmail, userType)
+      this.setSession(token, userEmail, userType, {
+        canCreate: canCreate ?? permissions?.canCreate,
+        canRead: canRead ?? permissions?.canRead,
+        canUpdate: canUpdate ?? permissions?.canUpdate,
+        canDelete: canDelete ?? permissions?.canDelete,
+      })
       return response.data
     },
 
     async refreshAccessToken() {
       const response = await api.post('/auth/refresh')
 
-      const { token, email, userType } = response.data
+      const {
+        token,
+        email,
+        userType,
+        canCreate,
+        canRead,
+        canUpdate,
+        canDelete,
+        permissions,
+      } = response.data
 
       if (!token) {
         throw new Error('The server did not return a new access token.')
       }
 
-      this.setSession(token, email, userType)
+      this.setSession(token, email, userType, {
+        canCreate: canCreate ?? permissions?.canCreate,
+        canRead: canRead ?? permissions?.canRead,
+        canUpdate: canUpdate ?? permissions?.canUpdate,
+        canDelete: canDelete ?? permissions?.canDelete,
+      })
       return token
     },
 
-    /**
-     * Restore session on app startup or refresh.
-     * Uses ensureCsrfToken() which no-ops if XSRF-TOKEN cookie exists,
-     * reducing 2 round-trips to 1.
-     */
     async tryRestoreSession() {
       try {
         await ensureCsrfToken()
@@ -145,6 +180,30 @@ export const useAuthStore = defineStore('auth', {
         return false
       } finally {
         this.initialized = true
+      }
+    },
+
+    async fetchCurrentUser() {
+      if (!this.token) return
+      try {
+        const response = await api.get('/auth/me')
+        const {
+          email: userEmail,
+          userType,
+          canCreate,
+          canRead,
+          canUpdate,
+          canDelete,
+        } = response.data
+
+        this.email = userEmail
+        this.userType = userType
+        this.canCreate = Boolean(canCreate)
+        this.canRead = Boolean(canRead)
+        this.canUpdate = Boolean(canUpdate)
+        this.canDelete = Boolean(canDelete)
+      } catch {
+        // ignore if network fails
       }
     },
 

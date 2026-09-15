@@ -85,7 +85,7 @@ public class AuthController {
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
         addRefreshCookie(response, refreshToken.getToken());
 
-        return ResponseEntity.ok(new LoginResponse(accessToken, user.getEmail(), user.getUserType().name()));
+        return ResponseEntity.ok(createLoginResponse(accessToken, user));
     }
 
     @PostMapping("/forgot-password")
@@ -138,10 +138,19 @@ public class AuthController {
         }
 
         User user = refreshToken.getUser();
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        User freshUser = userRepository.findById(user.getId()).orElse(user);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(freshUser.getEmail());
         String newAccessToken = jwtUtil.generateToken(userDetails);
 
-        return ResponseEntity.ok(new LoginResponse(newAccessToken, user.getEmail(), user.getUserType().name()));
+        return ResponseEntity.ok(createLoginResponse(newAccessToken, freshUser));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(createLoginResponse(null, user));
     }
 
     @PostMapping("/logout")
@@ -177,6 +186,19 @@ public class AuthController {
         cookie.setPath("/api/auth");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
+    }
+
+    private LoginResponse createLoginResponse(String token, User user) {
+        boolean isSuperAdmin = user.getUserType() == User.UserType.SUPER_ADMIN;
+        return new LoginResponse(
+                token,
+                user.getEmail(),
+                user.getUserType().name(),
+                isSuperAdmin || user.isCanCreate(),
+                isSuperAdmin || user.isCanRead(),
+                isSuperAdmin || user.isCanUpdate(),
+                isSuperAdmin || user.isCanDelete()
+        );
     }
 
     private String extractRefreshCookie(HttpServletRequest request) {
