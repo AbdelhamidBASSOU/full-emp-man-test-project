@@ -29,11 +29,6 @@ async function handleLogin() {
     loading.value = false
   }
 }
-
-function fillCredentials(demoEmail, demoPassword) {
-  email.value = demoEmail
-  password.value = demoPassword
-}
 </script>
 
 <template>
@@ -97,26 +92,6 @@ function fillCredentials(demoEmail, demoPassword) {
           </svg>
           {{ loading ? 'Authenticating...' : 'Sign In' }}
         </button>
-
-        <div class="demo-accounts">
-          <span class="demo-title mono">&gt; quick fill demo account:</span>
-          <div class="demo-buttons">
-            <button
-              type="button"
-              class="btn btn-sm btn-ghost demo-btn"
-              @click="fillCredentials('admin1@company.com', 'Admin123!')"
-            >
-              Super Admin
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-ghost demo-btn"
-              @click="fillCredentials('user2@company.com', '151515')"
-            >
-              Normal User
-            </button>
-          </div>
-        </div>
       </form>
     </div>
   </div>
@@ -247,37 +222,5 @@ function fillCredentials(demoEmail, demoPassword) {
   font-size: 14px;
   font-weight: 600;
   margin-top: var(--space-xs);
-}
-
-.demo-accounts {
-  margin-top: var(--space-sm);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.demo-title {
-  font-size: 11px;
-  color: var(--color-text-muted);
-}
-
-.demo-buttons {
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.demo-btn {
-  flex: 1;
-  font-size: 12px;
-  border: 1px dashed var(--color-border);
-  color: var(--color-text-muted);
-}
-
-.demo-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-text);
-  background: rgba(255, 255, 255, 0.04);
 }
 </style>
