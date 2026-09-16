@@ -7,21 +7,26 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
     @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    private JwtDecoder jwtDecoder;
 
     @Override
+    @SuppressWarnings("unchecked")
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor =
                 MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
@@ -38,21 +43,19 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
             String token = authHeader.substring(7);
 
             try {
-                String username = jwtUtil.extractUsername(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                Jwt jwt = jwtDecoder.decode(token);
 
-                if (!jwtUtil.isTokenValid(token, userDetails)) {
-                    throw new IllegalArgumentException(
-                            "WebSocket CONNECT rejected: JWT token is invalid or expired"
-                    );
+                // Extract realm roles the same way SecurityConfig does
+                List<GrantedAuthority> authorities = Collections.emptyList();
+                Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+                if (realmAccess != null && realmAccess.containsKey("roles")) {
+                    List<String> roles = (List<String>) realmAccess.get("roles");
+                    authorities = roles.stream()
+                            .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                            .collect(Collectors.toList());
                 }
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities()
-                        );
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, authorities);
                 accessor.setUser(authentication);
 
             } catch (Exception e) {

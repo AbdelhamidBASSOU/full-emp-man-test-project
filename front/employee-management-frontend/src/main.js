@@ -15,12 +15,9 @@ async function bootstrap() {
   app.use(pinia)
 
   const authStore = useAuthStore(pinia)
+  authStore.initOidcEvents()
 
-  /**
-   * Try restoring session with a 1.5s timeout.
-   * If XSRF-TOKEN cookie exists, ensureCsrfToken() skips the extra GET request,
-   * making it 1 round-trip. If not logged in or backend down, it resolves fast (1.5s max).
-   */
+  // Try restoring existing session from storage/silent renew (1.5s timeout)
   try {
     await Promise.race([
       authStore.tryRestoreSession(),
@@ -31,9 +28,7 @@ async function bootstrap() {
   }
 
   app.use(router)
-
   await router.isReady()
-
   app.mount('#app')
 }
 

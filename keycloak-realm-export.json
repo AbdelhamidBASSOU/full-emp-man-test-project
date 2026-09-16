@@ -1,0 +1,111 @@
+{
+  "realm": "employee-management",
+  "displayName": "Employee Management",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "realm": [
+      {
+        "name": "SUPER_ADMIN",
+        "description": "Full administrative access",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "NORMAL_USER",
+        "description": "Regular employee account with individually granted permissions",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "emp-frontend",
+      "name": "Employee Management Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "user.attribute": "roles",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "app-backend",
+      "name": "Employee Management Backend (service account)",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "emp-backend-secret-2026",
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin1",
+      "email": "admin1@company.com",
+      "firstName": "Admin",
+      "lastName": "One",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{"type": "password", "value": "Admin123!", "temporary": false}],
+      "realmRoles": ["SUPER_ADMIN"]
+    },
+    {
+      "username": "admin2",
+      "email": "admin2@company.com",
+      "firstName": "Admin",
+      "lastName": "Two",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{"type": "password", "value": "Admin123!", "temporary": false}],
+      "realmRoles": ["SUPER_ADMIN"]
+    },
+    {
+      "username": "service-account-app-backend",
+      "enabled": true,
+      "serviceAccountClientId": "app-backend",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users"]
+      }
+    }
+  ]
+}
+

@@ -6,8 +6,7 @@ import {
 import { useAuthStore } from '../stores/auth'
 
 import LoginView from '../views/LoginView.vue'
-import ForgotPasswordView from '../views/ForgotPasswordView.vue'
-import ResetPasswordView from '../views/ResetPasswordView.vue'
+import CallbackView from '../views/CallbackView.vue'
 import UsersView from '../views/UsersView.vue'
 import EmployeesView from '../views/EmployeesView.vue'
 
@@ -19,15 +18,9 @@ const routes = [
   },
 
   {
-    path: '/forgot-password',
-    name: 'forgot-password',
-    component: ForgotPasswordView,
-  },
-
-  {
-    path: '/reset-password',
-    name: 'reset-password',
-    component: ResetPasswordView,
+    path: '/callback',
+    name: 'callback',
+    component: CallbackView,
   },
 
   {
@@ -39,7 +32,6 @@ const routes = [
     path: '/users',
     name: 'users',
     component: UsersView,
-
     meta: {
       requiresAuth: true,
       requiresSuperAdmin: true,
@@ -51,7 +43,6 @@ const routes = [
     path: '/employees',
     name: 'employees',
     component: EmployeesView,
-
     meta: {
       requiresAuth: true,
       title: 'Employees',
@@ -67,25 +58,25 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  /**
-   * Protected route.
-   */
+  // Allow callback processing route without interruption
+  if (to.name === 'callback') {
+    next()
+    return
+  }
+
+  // Protected route
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     next({ name: 'login' })
     return
   }
 
-  /**
-   * Super Admin-only route.
-   */
+  // Super Admin-only route
   if (to.meta.requiresSuperAdmin && !authStore.isSuperAdmin) {
     next({ name: 'employees' })
     return
   }
 
-  /**
-   * Logged-in users should not return to login.
-   */
+  // Logged-in users should not return to login
   if (to.name === 'login' && authStore.isLoggedIn) {
     next({ name: 'employees' })
     return

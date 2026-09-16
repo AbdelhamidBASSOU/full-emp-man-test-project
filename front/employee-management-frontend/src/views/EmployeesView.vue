@@ -32,7 +32,11 @@ async function loadEmployees() {
     totalPages.value = response.data.totalPages
     totalElements.value = response.data.totalElements
   } catch (err) {
-    error.value = 'Failed to load employees. Please try again.'
+    if (err.response?.status === 403) {
+      error.value = 'You do not have permission to view employee records. A Super Admin can grant you Read permission via the Users page.'
+    } else {
+      error.value = 'Failed to load employees. Please try again.'
+    }
   } finally {
     loading.value = false
   }

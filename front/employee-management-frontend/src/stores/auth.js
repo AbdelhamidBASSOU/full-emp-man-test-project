@@ -1,70 +1,7 @@
 import { defineStore } from 'pinia'
-import api, {
-  startLogout,
-  finishLogout,
-  ensureCsrfToken,
-} from '../api/axios'
-
+import { userManager } from '../oidc'
+import api from '../api/axios'
 import { useToastStore } from './toast'
-import { getTokenExpiryMs } from '../utils/jwt'
-
-const WARNING_BEFORE_EXPIRY_MS = 5 * 60 * 1000
-const REFRESH_BEFORE_EXPIRY_MS = 60 * 1000
-
-let expiryWarningTimer = null
-let automaticRefreshTimer = null
-
-function clearAuthTimers() {
-  if (expiryWarningTimer) {
-    clearTimeout(expiryWarningTimer)
-    expiryWarningTimer = null
-  }
-
-  if (automaticRefreshTimer) {
-    clearTimeout(automaticRefreshTimer)
-    automaticRefreshTimer = null
-  }
-}
-
-function scheduleExpiryWarning(token) {
-  if (expiryWarningTimer) {
-    clearTimeout(expiryWarningTimer)
-    expiryWarningTimer = null
-  }
-
-  const expiryMs = getTokenExpiryMs(token)
-  if (!expiryMs) return
-
-  const warnAt = expiryMs - WARNING_BEFORE_EXPIRY_MS
-  const delay = warnAt - Date.now()
-  if (delay <= 0) return
-
-  expiryWarningTimer = setTimeout(() => {
-    const toastStore = useToastStore()
-    toastStore.show('Your session will refresh automatically.', 'warning')
-  }, delay)
-}
-
-function scheduleAutomaticRefresh(token, refreshCallback) {
-  if (automaticRefreshTimer) {
-    clearTimeout(automaticRefreshTimer)
-    automaticRefreshTimer = null
-  }
-
-  const expiryMs = getTokenExpiryMs(token)
-  if (!expiryMs) return
-
-  const refreshAt = expiryMs - REFRESH_BEFORE_EXPIRY_MS
-  const delay = Math.max(refreshAt - Date.now(), 1000)
-
-  automaticRefreshTimer = setTimeout(async () => {
-    try {
-      await refreshCallback()
-    } catch {
-      /* If refresh fails, auth flow handles session clear */
-    }
-  }, delay)
-}
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -84,19 +21,22 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setSession(token, email, userType, permissions = {}) {
-      clearAuthTimers()
+    setOidcUser(user) {
+      if (!user || user.expired) {
+        this.clearSession()
+        return
+      }
 
-      this.token = token
-      this.email = email
-      this.userType = userType
-      this.canCreate = Boolean(permissions.canCreate)
-      this.canRead = Boolean(permissions.canRead)
-      this.canUpdate = Boolean(permissions.canUpdate)
-      this.canDelete = Boolean(permissions.canDelete)
+      this.token = user.access_token
+      this.email = user.profile?.email || user.profile?.preferred_username || null
 
-      scheduleExpiryWarning(token)
-      scheduleAutomaticRefresh(token, () => this.refreshAccessToken())
+      // Check roles in realm_access claim
+      const roles = user.profile?.realm_access?.roles || []
+      if (roles.includes('SUPER_ADMIN')) {
+        this.userType = 'SUPER_ADMIN'
+      } else {
+        this.userType = 'NORMAL_USER'
+      }
     },
 
     clearSession() {
@@ -107,74 +47,52 @@ export const useAuthStore = defineStore('auth', {
       this.canRead = false
       this.canUpdate = false
       this.canDelete = false
-
-      clearAuthTimers()
     },
 
-    async login(email, password) {
-      finishLogout()
+    async login() {
+      await userManager.signinRedirect()
+    },
 
-      const response = await api.post('/auth/login', {
-        email,
-        password,
-      })
-
-      const {
-        token,
-        email: userEmail,
-        userType,
-        canCreate,
-        canRead,
-        canUpdate,
-        canDelete,
-        permissions,
-      } = response.data
-
-      if (!token) {
-        throw new Error('The server did not return an access token.')
-      }
-
-      this.setSession(token, userEmail, userType, {
-        canCreate: canCreate ?? permissions?.canCreate,
-        canRead: canRead ?? permissions?.canRead,
-        canUpdate: canUpdate ?? permissions?.canUpdate,
-        canDelete: canDelete ?? permissions?.canDelete,
-      })
-      return response.data
+    async handleCallback() {
+      const user = await userManager.signinCallback()
+      this.setOidcUser(user)
+      await this.fetchCurrentUser()
+      return user
     },
 
     async refreshAccessToken() {
-      const response = await api.post('/auth/refresh')
-
-      const {
-        token,
-        email,
-        userType,
-        canCreate,
-        canRead,
-        canUpdate,
-        canDelete,
-        permissions,
-      } = response.data
-
-      if (!token) {
-        throw new Error('The server did not return a new access token.')
+      try {
+        const user = await userManager.signinSilent()
+        this.setOidcUser(user)
+        return user.access_token
+      } catch (err) {
+        this.clearSession()
+        throw err
       }
-
-      this.setSession(token, email, userType, {
-        canCreate: canCreate ?? permissions?.canCreate,
-        canRead: canRead ?? permissions?.canRead,
-        canUpdate: canUpdate ?? permissions?.canUpdate,
-        canDelete: canDelete ?? permissions?.canDelete,
-      })
-      return token
     },
 
     async tryRestoreSession() {
       try {
-        await ensureCsrfToken()
-        await this.refreshAccessToken()
-        return true
+        let user = await userManager.getUser()
+        if (user && !user.expired) {
+          this.setOidcUser(user)
+          await this.fetchCurrentUser()
+          return true
+        }
+
+        try {
+          user = await userManager.signinSilent()
+          if (user && !user.expired) {
+            this.setOidcUser(user)
+            await this.fetchCurrentUser()
+            return true
+          }
+        } catch {
+          // Silent renew failed / not logged in
+        }
+
+        this.clearSession()
+        return false
       } catch {
         this.clearSession()
         return false
@@ -196,30 +114,42 @@ export const useAuthStore = defineStore('auth', {
           canDelete,
         } = response.data
 
-        this.email = userEmail
-        this.userType = userType
+        if (userEmail) this.email = userEmail
+        if (userType) this.userType = userType
         this.canCreate = Boolean(canCreate)
         this.canRead = Boolean(canRead)
         this.canUpdate = Boolean(canUpdate)
         this.canDelete = Boolean(canDelete)
-      } catch {
-        // ignore if network fails
+      } catch (err) {
+        console.warn('Failed to fetch user permissions:', err)
       }
     },
 
     async logout() {
-      startLogout()
       this.clearSession()
-
       try {
-        await ensureCsrfToken()
-        await api.post('/auth/logout')
-      } catch (error) {
-        console.warn('Server logout request failed:', error)
+        await userManager.signoutRedirect()
+      } catch (err) {
+        console.warn('OIDC logout failed:', err)
       } finally {
         this.initialized = true
-        finishLogout()
       }
+    },
+
+    initOidcEvents() {
+      const toastStore = useToastStore()
+
+      userManager.events.addAccessTokenExpiring(() => {
+        toastStore.show('Your session will refresh automatically.', 'warning')
+      })
+
+      userManager.events.addUserLoaded((user) => {
+        this.setOidcUser(user)
+      })
+
+      userManager.events.addUserSignedOut(() => {
+        this.clearSession()
+      })
     },
   },
 })

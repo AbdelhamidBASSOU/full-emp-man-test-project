@@ -1,49 +1,19 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-const email = ref('')
-const password = ref('')
-const error = ref('')
-const loading = ref(false)
-
 const authStore = useAuthStore()
-const router = useRouter()
+const loading = ref(false)
+const error = ref('')
 
 async function handleLogin() {
   error.value = ''
   loading.value = true
-
   try {
-    await authStore.login(
-      email.value.trim(),
-      password.value,
-    )
-
-    await router.push('/employees')
+    await authStore.login()
   } catch (err) {
-    console.error('Login failed:', err)
-
-    const status = err.response?.status
-
-    if (status === 401) {
-      error.value =
-        'Invalid email or password.'
-    } else if (status === 403) {
-      error.value =
-        'Access denied. Please try again.'
-    } else if (status === 429) {
-      error.value =
-        'Too many login attempts. Please wait and try again later.'
-    } else if (err.response) {
-      error.value =
-        'The server rejected the login request.'
-    } else {
-      error.value =
-        'Unable to connect to the server.'
-    }
-  } finally {
+    console.error('Redirect to login failed:', err)
+    error.value = 'Failed to connect to identity provider. Please check if Keycloak is running.'
     loading.value = false
   }
 }
@@ -60,66 +30,36 @@ async function handleLogin() {
 
       <div class="brand">
         <div class="brand-mark">EM</div>
-
         <h1>Employee Management</h1>
       </div>
 
       <p class="subtitle mono">
-        &gt; authenticate to continue
+        &gt; authenticate with Keycloak to continue
       </p>
 
-      <form @submit.prevent="handleLogin">
-        <div class="field">
-          <label>Email or Username</label>
-
-          <input
-            v-model="email"
-            type="text"
-            placeholder="you@company.com"
-            class="input"
-            autocomplete="username"
-            required
-          />
-        </div>
-
-        <div class="field">
-          <label>Password</label>
-
-          <input
-            v-model="password"
-            type="password"
-            placeholder="••••••••"
-            class="input"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-
-        <div class="forgot-password">
-          <router-link to="/forgot-password">
-            Forgot password?
-          </router-link>
-        </div>
-
-        <p
-          v-if="error"
-          class="general-error"
-        >
+      <div class="auth-box">
+        <p v-if="error" class="general-error">
           {{ error }}
         </p>
 
         <button
-          type="submit"
+          type="button"
           class="btn btn-primary btn-full"
           :disabled="loading"
+          @click="handleLogin"
         >
-          {{
-            loading
-              ? 'Signing in...'
-              : 'Sign In'
-          }}
+          <svg v-if="!loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          {{ loading ? 'Redirecting to login...' : 'Sign In with Keycloak' }}
         </button>
-      </form>
+
+        <p class="hint-text">
+          Authentication and single sign-on are managed securely via Keycloak.
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -203,50 +143,35 @@ async function handleLogin() {
 .subtitle {
   color: var(--color-text-muted);
   font-size: 13px;
-  margin:
-    var(--space-xs)
-    0
-    var(--space-xl)
-    0;
+  margin: var(--space-xs) 0 var(--space-xl) 0;
 }
 
-.field {
-  margin-bottom: var(--space-md);
-}
-
-.field label {
-  display: block;
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin-bottom: 4px;
-}
-
-.forgot-password {
-  text-align: right;
-  margin-top: -6px;
-  margin-bottom: var(--space-md);
-}
-
-.forgot-password a {
-  color: var(--color-primary);
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.forgot-password a:hover {
-  text-decoration: underline;
+.auth-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .general-error {
   color: var(--color-danger);
   font-size: 13px;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-xs);
 }
 
 .btn-full {
   width: 100%;
   justify-content: center;
   text-align: center;
-  margin-top: var(--space-sm);
+  padding: 11px var(--space-lg);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.5;
+  margin-top: var(--space-xs);
 }
 </style>
