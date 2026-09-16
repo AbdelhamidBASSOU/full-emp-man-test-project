@@ -38,11 +38,22 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:5173/*"],
-      "webOrigins": ["http://localhost:5173"],
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:80/*",
+        "http://localhost/*",
+        "http://127.0.0.1:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:80",
+        "http://localhost",
+        "http://127.0.0.1:5173",
+        "+"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/*"
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:80/*##http://localhost/*"
       },
       "protocol": "openid-connect",
       "fullScopeAllowed": true,
@@ -85,8 +96,16 @@
       "lastName": "One",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{"type": "password", "value": "Admin123!", "temporary": false}],
-      "realmRoles": ["SUPER_ADMIN"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "SUPER_ADMIN"
+      ]
     },
     {
       "username": "admin2",
@@ -95,15 +114,63 @@
       "lastName": "Two",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{"type": "password", "value": "Admin123!", "temporary": false}],
-      "realmRoles": ["SUPER_ADMIN"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "SUPER_ADMIN"
+      ]
+    },
+    {
+      "username": "user2",
+      "email": "user2@company.com",
+      "firstName": "User",
+      "lastName": "Two",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "151515",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "NORMAL_USER"
+      ]
+    },
+    {
+      "username": "johndoe",
+      "email": "johndoe@company.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Password123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "NORMAL_USER"
+      ]
     },
     {
       "username": "service-account-app-backend",
       "enabled": true,
       "serviceAccountClientId": "app-backend",
       "clientRoles": {
-        "realm-management": ["manage-users", "view-users", "query-users"]
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users"
+        ]
       }
     }
   ]

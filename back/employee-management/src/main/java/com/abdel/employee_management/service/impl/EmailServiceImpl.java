@@ -1,4 +1,4 @@
-package com.abdel.employee_management.service.implementation;
+package com.abdel.employee_management.service.impl;
 
 import com.abdel.employee_management.service.EmailService;
 import lombok.RequiredArgsConstructor;

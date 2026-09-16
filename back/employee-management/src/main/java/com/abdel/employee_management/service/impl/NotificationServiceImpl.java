@@ -1,4 +1,4 @@
-package com.abdel.employee_management.service.implementation;
+package com.abdel.employee_management.service.impl;
 
 import com.abdel.employee_management.dto.NotificationDTO;
 import com.abdel.employee_management.model.Notification;

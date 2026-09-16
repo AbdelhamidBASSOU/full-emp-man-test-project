@@ -27,6 +27,8 @@ public class DataSeeder implements CommandLineRunner {
         cleanLegacyConstraints();
         seedAdmin("Admin One", "admin1@company.com");
         seedAdmin("Admin Two", "admin2@company.com");
+        seedNormalUser("User Two", "user2@company.com", false, true, false, false);
+        seedNormalUser("John Doe", "johndoe@company.com", false, true, false, false);
     }
 
     private void cleanLegacyConstraints() {
@@ -76,5 +78,35 @@ public class DataSeeder implements CommandLineRunner {
         admin.setEnabled(true);
         userRepository.save(admin);
         System.out.println("Seeded super admin: " + email);
+    }
+
+    private void seedNormalUser(String name, String email, boolean canCreate, boolean canRead, boolean canUpdate, boolean canDelete) {
+        String keycloakId = keycloakAdminService.findUserIdByEmail(email);
+        if (keycloakId == null) {
+            return;
+        }
+
+        Optional<User> existing = userRepository.findByEmail(email);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            if (user.getKeycloakId() == null || !user.getKeycloakId().equals(keycloakId)) {
+                user.setKeycloakId(keycloakId);
+                userRepository.save(user);
+            }
+            return;
+        }
+
+        User user = new User();
+        user.setKeycloakId(keycloakId);
+        user.setName(name);
+        user.setEmail(email);
+        user.setUserType(User.UserType.NORMAL_USER);
+        user.setCanCreate(canCreate);
+        user.setCanRead(canRead);
+        user.setCanUpdate(canUpdate);
+        user.setCanDelete(canDelete);
+        user.setEnabled(true);
+        userRepository.save(user);
+        System.out.println("Seeded normal user: " + email);
     }
 }
