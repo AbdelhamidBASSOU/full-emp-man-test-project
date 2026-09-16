@@ -64,7 +64,7 @@ public class PermissionChecker {
         newUser.setName(name != null && !name.isBlank() ? name : (email != null ? email : "User"));
         newUser.setUserType(isSuperAdmin ? User.UserType.SUPER_ADMIN : User.UserType.NORMAL_USER);
         newUser.setCanCreate(isSuperAdmin);
-        newUser.setCanRead(isSuperAdmin);
+        newUser.setCanRead(true);
         newUser.setCanUpdate(isSuperAdmin);
         newUser.setCanDelete(isSuperAdmin);
         newUser.setEnabled(true);
