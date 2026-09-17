@@ -86,6 +86,7 @@ public class EmployeeController {
 
     @GetMapping("/{id}/photo")
     public ResponseEntity<byte[]> downloadPhoto(@PathVariable Long id) throws IOException {
+        permissionChecker.checkRead();
         InputStream fileStream = employeeService.downloadPhoto(id);
         byte[] fileBytes = fileStream.readAllBytes();
 

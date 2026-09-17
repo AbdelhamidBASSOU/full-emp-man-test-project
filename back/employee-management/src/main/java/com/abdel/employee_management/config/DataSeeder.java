@@ -3,6 +3,7 @@ package com.abdel.employee_management.config;
 import com.abdel.employee_management.model.User;
 import com.abdel.employee_management.repository.UserRepository;
 import com.abdel.employee_management.service.KeycloakAdminService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+@Slf4j
 @Component
 public class DataSeeder implements CommandLineRunner {
 
@@ -51,7 +53,7 @@ public class DataSeeder implements CommandLineRunner {
     private void seedAdmin(String name, String email) {
         String keycloakId = keycloakAdminService.findUserIdByEmail(email);
         if (keycloakId == null) {
-            System.out.println("Keycloak user not found for " + email + " — skipping seed. Import the realm first.");
+            log.info("Keycloak user not found for {} — skipping seed. Import the realm first.", email);
             return;
         }
 
@@ -61,7 +63,7 @@ public class DataSeeder implements CommandLineRunner {
             if (admin.getKeycloakId() == null || !admin.getKeycloakId().equals(keycloakId)) {
                 admin.setKeycloakId(keycloakId);
                 userRepository.save(admin);
-                System.out.println("Updated keycloakId for existing admin: " + email);
+                log.info("Updated keycloakId for existing admin: {}", email);
             }
             return;
         }
@@ -77,7 +79,7 @@ public class DataSeeder implements CommandLineRunner {
         admin.setCanDelete(true);
         admin.setEnabled(true);
         userRepository.save(admin);
-        System.out.println("Seeded super admin: " + email);
+        log.info("Seeded super admin: {}", email);
     }
 
     private void seedNormalUser(String name, String email, boolean canCreate, boolean canRead, boolean canUpdate, boolean canDelete) {
@@ -107,6 +109,6 @@ public class DataSeeder implements CommandLineRunner {
         user.setCanDelete(canDelete);
         user.setEnabled(true);
         userRepository.save(user);
-        System.out.println("Seeded normal user: " + email);
+        log.info("Seeded normal user: {}", email);
     }
 }

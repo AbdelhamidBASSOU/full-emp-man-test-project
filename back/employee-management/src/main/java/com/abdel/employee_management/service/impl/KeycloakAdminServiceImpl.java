@@ -3,6 +3,7 @@ package com.abdel.employee_management.service.impl;
 import com.abdel.employee_management.service.KeycloakAdminService;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -14,8 +15,10 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Service
 public class KeycloakAdminServiceImpl implements KeycloakAdminService {
 
@@ -60,7 +63,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
         user.setEmail(email);
         user.setEnabled(true);
         user.setEmailVerified(true);
-        user.setRequiredActions(java.util.Collections.emptyList());
+        user.setRequiredActions(Collections.emptyList());
 
         String[] parts = (name != null ? name.trim() : "").split("\\s+", 2);
         String first = parts.length > 0 && !parts[0].isBlank() ? parts[0] : email;
@@ -95,7 +98,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
         try {
             getRealmResource().users().get(keycloakId).remove();
         } catch (Exception err) {
-            System.err.println("Could not delete user from Keycloak: " + err.getMessage());
+            log.warn("Could not delete user {} from Keycloak: {}", keycloakId, err.getMessage());
         }
     }
 
@@ -117,7 +120,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
             user.setUsername(email);
             user.setEnabled(true);
             user.setEmailVerified(true);
-            user.setRequiredActions(java.util.Collections.emptyList());
+            user.setRequiredActions(Collections.emptyList());
 
             String[] parts = (name != null ? name.trim() : "").split("\\s+", 2);
             String first = parts.length > 0 && !parts[0].isBlank() ? parts[0] : (user.getFirstName() != null ? user.getFirstName() : email);
@@ -139,17 +142,15 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 assignRole(keycloakId, realmRole);
             }
         } catch (NotFoundException e) {
-            // User did not exist in Keycloak; create now
             createUser(name, email, newPassword, realmRole);
         } catch (Exception err) {
-            System.err.println("Could not update user in Keycloak: " + err.getMessage());
+            log.warn("Could not update user {} in Keycloak: {}", keycloakId, err.getMessage());
         }
     }
 
     private void assignRole(String keycloakId, String realmRole) {
         if (keycloakId == null || realmRole == null || realmRole.isBlank()) return;
         try {
-            // Remove any other mutually exclusive realm roles
             List<RoleRepresentation> currentRoles = getRealmResource().users().get(keycloakId).roles().realmLevel().listAll();
             if (currentRoles != null) {
                 List<RoleRepresentation> toRemove = currentRoles.stream()
@@ -163,7 +164,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
             RoleRepresentation role = getRealmResource().roles().get(realmRole).toRepresentation();
             getRealmResource().users().get(keycloakId).roles().realmLevel().add(List.of(role));
         } catch (Exception e) {
-            System.err.println("Could not assign role " + realmRole + " in Keycloak: " + e.getMessage());
+            log.warn("Could not assign role {} to user {} in Keycloak: {}", realmRole, keycloakId, e.getMessage());
         }
     }
 
@@ -178,7 +179,7 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
                 return users.get(0).getId();
             }
         } catch (Exception e) {
-            System.err.println("Failed to search user by email in Keycloak: " + e.getMessage());
+            log.warn("Failed to search user by email {} in Keycloak: {}", email, e.getMessage());
         }
         return null;
     }
